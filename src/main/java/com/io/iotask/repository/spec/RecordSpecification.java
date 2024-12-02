@@ -1,5 +1,6 @@
 package com.io.iotask.repository;
 
+import com.io.iotask.repository.entity.Record;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.UUID;

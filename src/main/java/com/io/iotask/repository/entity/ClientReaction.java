@@ -1,11 +1,14 @@
-package com.io.iotask.repository;
+package com.io.iotask.repository.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.UUID;
@@ -14,12 +17,17 @@ import java.util.UUID;
 @Getter
 @Setter
 @AllArgsConstructor
-@Table(name = "client_reaction", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"client_id", "record_id"})
-})
+@NoArgsConstructor
+@Table(
+        name = "client_reaction",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"client_id", "record_id"})}
+)
 public class ClientReaction {
     @Id
     private UUID clientId;
     private UUID recordId;
-    private boolean liked;
+
+    @Min(-1L)
+    @Max(1L)
+    private int reaction;
 }

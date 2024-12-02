@@ -1,14 +1,15 @@
 package com.io.iotask.service.impl;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.io.iotask.repository.Record;
-import com.io.iotask.repository.RecordRepository;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
-import org.springframework.util.ConcurrentLruCache;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
+import java.math.BigInteger;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,73 +17,71 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DeferredWriteCache<K, V> {
 
-    private final Cache<K, V> cache; // Кэш от Caffeine
-    private final Set<K> dirtyKeys = ConcurrentHashMap.newKeySet(); // "Грязные" ключи
-    private final ScheduledExecutorService scheduler;
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DeferredWriteCache implements DisposableBean {
+    private final Cache<UUID, BigInteger> cache = Caffeine.newBuilder().build();
+    private final Set<UUID> dirtyKeys = ConcurrentHashMap.newKeySet();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final RecordDataFlusher recordDataFlusher;
 
-    private final DatabaseSaver<K, V> databaseSaver; // Интерфейс для сохранения в базу
-
-    public DeferredWriteCache(int maxSize, DatabaseSaver<K, V> databaseSaver) {
-        this.cache = Caffeine.newBuilder()
-                .maximumSize(maxSize) // Максимальное количество записей
-                .build();
-        this.databaseSaver = databaseSaver;
-        this.scheduler = Executors.newSingleThreadScheduledExecutor();
-
-        // Запускаем периодическое сохранение
-        scheduler.scheduleAtFixedRate(this::flushDirtyKeys, 5, 5, TimeUnit.SECONDS);
+    @PostConstruct
+    public void init() {
+        log.trace("Starting deferred write cache flusher");
+        scheduler.scheduleAtFixedRate(this::flushDirtyKeys, 20L, 20L, TimeUnit.SECONDS);
+        log.trace("Deferred write cache flusher started");
     }
 
-    // Добавление или обновление элемента в кэше
-    public void put(K key, V value) {
+    public void increment(UUID key, int value) {
+        cache.asMap().merge(key, BigInteger.valueOf(value), BigInteger::add);
+        dirtyKeys.add(key);
+    }
+
+    public void put(UUID key, BigInteger value) {
         cache.put(key, value);
-        dirtyKeys.add(key); // Помечаем ключ как измененный
+        dirtyKeys.add(key);
     }
 
-    // Получение элемента из кэша
-    public V get(K key) {
+    public BigInteger get(UUID key) {
         return cache.getIfPresent(key);
     }
 
-    // Принудительное сохранение "грязных" записей в базу
     public synchronized void flushDirtyKeys() {
-        if (dirtyKeys.isEmpty()) {
-            return;
+        if (!dirtyKeys.isEmpty()) {
+            Set<UUID> keysToSave = new HashSet<>(dirtyKeys);
+            dirtyKeys.clear();
+
+            keysToSave.forEach(key -> cache.asMap()
+                    .computeIfPresent(key, (k, v) -> {
+                        try {
+                            recordDataFlusher.save(k, v);
+                            dirtyKeys.remove(k);
+                            return null;
+                        } catch (Exception var4) {
+                            log.error("Error occurred while saving record with id={}, message={}", k, var4.getMessage());
+                            dirtyKeys.add(k);
+                            return v;
+                        }
+                    }));
         }
-
-        // Копируем список "грязных" ключей и очищаем его
-        Set<K> keysToSave = new HashSet<>(dirtyKeys);
-        dirtyKeys.clear();
-
-        // Сохраняем данные для всех ключей
-        Map<K, V> entriesToSave = new HashMap<>();
-        for (K key : keysToSave) {
-            V value = cache.getIfPresent(key);
-            if (value != null) {
-                entriesToSave.put(key, value);
-            }
-        }
-
-        // Вызываем метод сохранения в базу
-        databaseSaver.save(entriesToSave);
     }
 
-    // Завершение работы
-    public void shutdown() {
+    public void destroy() throws Exception {
+        log.info("Stopping deferred write cache flusher");
         scheduler.shutdown();
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            scheduler.shutdownNow();
-        }
-    }
 
-    // Интерфейс для реализации сохранения в базу
-    public interface DatabaseSaver<K, V> {
-        void save(Map<K, V> entries);
+        try {
+            log.trace("Waiting for deferred write cache flusher to stop");
+            if (!scheduler.awaitTermination(60L, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+                log.warn("Deferred write cache flusher did not stop gracefully");
+            }
+        } catch (InterruptedException var2) {
+            log.error("Interrupted while waiting for deferred write cache flusher to stop", var2);
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }

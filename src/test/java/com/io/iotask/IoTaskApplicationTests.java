@@ -9,5 +9,4 @@ class IoTaskApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }

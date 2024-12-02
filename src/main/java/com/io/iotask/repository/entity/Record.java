@@ -1,4 +1,4 @@
-package com.io.iotask.repository;
+package com.io.iotask.repository.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
