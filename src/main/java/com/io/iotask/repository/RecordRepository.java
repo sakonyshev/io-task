@@ -16,7 +16,8 @@ import java.util.UUID;
 @Repository
 public interface RecordRepository extends JpaRepository<Record, UUID>, JpaSpecificationExecutor<Record> {
     @Modifying
-    @Query("update Record r set r.likes=r.likes + :likes where r.id=:id and r.deleted = FALSE")
+    @Query("update Record r set r.likes=r.likes + :likes " +
+            " where r.id=:id and r.deleted = FALSE")
     void processStoredLikes(@Param("id") UUID id, @Param("likes") BigInteger likes);
 
     @Modifying
@@ -25,7 +26,12 @@ public interface RecordRepository extends JpaRepository<Record, UUID>, JpaSpecif
     int softDeleteBy(@Param("id") UUID uuid);
 
     @Query(
-            value = "SELECT r.author  FROM records r  GROUP BY r.author  ORDER BY SUM(likes) DESC, SUM(views) DESC  LIMIT :size",
+            value = " SELECT r.author " +
+                    " FROM records r " +
+                    " WHERE r.deleted=FALSE" +
+                    " GROUP BY r.author " +
+                    " ORDER BY SUM(likes) DESC, SUM(views) DESC " +
+                    " LIMIT :size",
             nativeQuery = true
     )
     List<String> getInfluenceAuthors(@Param("size") int size);

@@ -8,10 +8,13 @@ package com.io.iotask.web.controller;
 import com.io.iotask.repository.RecordRepository;
 import com.io.iotask.service.LikeCalculationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -29,13 +32,13 @@ import java.util.UUID;
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-@RequestMapping({"io-task/v1/metrics"})
+@RequestMapping({"io-task/v1/metric"})
 public class DataMetricController {
     private final LikeCalculationService likeCalculationService;
     private final RecordRepository recordRepository;
 
-    @GetMapping({"/authors"})
-    @Operation(summary = "Get influence authors", description = "This method returns influence authors")
+    @GetMapping({"/author"})
+    @Operation(summary = "Get influence authors", description = "This method returns influence authors (Top N)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Authors were found"
             )})
@@ -44,7 +47,7 @@ public class DataMetricController {
         return recordRepository.getInfluenceAuthors(size);
     }
 
-    @PostMapping({"/like/{id}"})
+    @PostMapping({"/record/{id}/like"})
     @Operation(summary = "Like record",
             description = "This method is used to save user reaction to record")
     @ApiResponses(value = {
@@ -53,8 +56,13 @@ public class DataMetricController {
             @ApiResponse(responseCode = "400", description = "Client already reacted to this record"
             )})
     public void likeRecord(@CookieValue(name = "clientId", required = false) UUID clientId,
-                           @PathVariable("id") UUID recordId,
-                           @RequestParam(name = "like", defaultValue = "0") int like,
+                           @PathVariable("id")
+                           @Parameter(description = "Record id from database")
+                           UUID recordId,
+                           @RequestParam(name = "like", defaultValue = "0")
+                           @Min(-1) @Max(1)
+                           @Parameter(description = "Like value: -1 - dislike, 0 - neutral or retract vote, 1 - like")
+                           int like,
                            HttpServletResponse response) {
         log.trace("Processing like for record {} with value {}", recordId, like);
 

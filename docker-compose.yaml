@@ -9,9 +9,9 @@ services:
     hostname: mysql
     environment:
       MYSQL_ROOT_PASSWORD: password
-      MYSQL_USER: threat_fabric
+      MYSQL_USER: io_task
       MYSQL_PASSWORD: password
-      MYSQL_DATABASE: threat_fabric
+      MYSQL_DATABASE: io_task
     volumes:
       - db:/var/lib/mysql
     ports:
@@ -24,86 +24,12 @@ services:
       timeout: 3s
       retries: 120
 
-  broker:
-    image: confluentinc/cp-kafka:7.5.0
-    hostname: broker
-    ports:
-      - "9092:9092"
-      - "9101:9101"
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-    healthcheck:
-      test: nc -z localhost 9092 || exit -1
-      start_period: 15s
-      interval: 5s
-      timeout: 10s
-      retries: 20
-
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.5.0
-    hostname: schema-registry
-    depends_on:
-      - broker
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-
-  postgresql:
-    image: postgres:14
-    hostname: postgresql
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: "conduktor-platform"
-      POSTGRES_USER: "conduktor"
-      POSTGRES_PASSWORD: "some_password"
-      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
-
-  conduktor-platform:
-    image: conduktor/conduktor-platform:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - conduktor_data:/var/conduktor
-    environment:
-      CDK_ORGANIZATION_NAME: "demo"
-      CDK_ADMIN_EMAIL: "admin@admin.io"
-      CDK_ADMIN_PASSWORD: "admin"
-      CDK_DATABASE_URL: "postgresql://conduktor:some_password@postgresql:5432/conduktor-platform"
-      CDK_CLUSTERS_0_ID: "default"
-      CDK_CLUSTERS_0_NAME: "My Local Kafka Cluster"
-      CDK_CLUSTERS_0_COLOR: "#0013E7"
-      CDK_CLUSTERS_0_BOOTSTRAPSERVERS: "PLAINTEXT://broker:29092"
-      CDK_CLUSTERS_0_SCHEMAREGISTRY_URL: "http://schema-registry:8081"
-
-  threat-fabric-task:
+  io-task:
     depends_on:
       mysql:
         condition: service_healthy
-      broker:
-        condition: service_healthy
-    image: threat-fabric-task:0.0.1-SNAPSHOT
+    image: io-task:0.0.1-SNAPSHOT
     ports:
-      - "8090:8090"
+      - "8080:8080"
     environment:
       MYSQL_HOST: "mysql"
-      KAFKA_CLUSTER_URL: "broker"
-      KAFKA_CLUSTER_PORT: "29092"

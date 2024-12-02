@@ -23,7 +23,7 @@ class LikeCalculationServiceImplTest {
     @InjectMocks
     private LikeCalculationServiceImpl testedObject;
     @Mock
-    private DeferredWriteCache likeCache;
+    private DeferredRecordWriteCacheImpl likeCache;
     @Mock
     private ClientReactionRepository clientReactionRepository;
     @Mock

@@ -1,4 +1,4 @@
-package com.io.iotask.repository;
+package com.io.iotask.repository.spec;
 
 import com.io.iotask.repository.entity.Record;
 import org.springframework.data.jpa.domain.Specification;
@@ -14,11 +14,11 @@ public class RecordSpecification {
     }
 
     public static Specification<Record> likeAuthor(String author) {
-        return (root, query, cb) -> author == null ? cb.conjunction() : cb.like(root.get("author"), author);
+        return (root, query, cb) -> author == null ? cb.conjunction() : cb.like(root.get("author"), "%" + author + "%");
     }
 
     public static Specification<Record> likeTitle(String title) {
-        return (root, query, cb) -> title == null ? cb.conjunction() : cb.like(root.get("title"), title);
+        return (root, query, cb) -> title == null ? cb.conjunction() : cb.like(root.get("title"), "%" + title + "%");
     }
 
     public static Specification<Record> isNotDeleted() {

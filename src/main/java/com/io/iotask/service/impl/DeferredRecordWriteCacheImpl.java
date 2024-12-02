@@ -2,6 +2,8 @@ package com.io.iotask.service.impl;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.io.iotask.service.DeferredRecordWriteCache;
+import com.io.iotask.service.RecordDataFlusher;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DeferredWriteCache implements DisposableBean {
+public class DeferredRecordWriteCacheImpl implements DisposableBean, DeferredRecordWriteCache {
     private final Cache<UUID, BigInteger> cache = Caffeine.newBuilder().build();
     private final Set<UUID> dirtyKeys = ConcurrentHashMap.newKeySet();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -34,28 +36,38 @@ public class DeferredWriteCache implements DisposableBean {
         log.trace("Deferred write cache flusher started");
     }
 
+    @Override
     public void increment(UUID key, int value) {
+        log.trace("Incrementing key={}, value={}", key, value);
         cache.asMap().merge(key, BigInteger.valueOf(value), BigInteger::add);
         dirtyKeys.add(key);
     }
 
+    @Override
     public void put(UUID key, BigInteger value) {
+        log.trace("Putting key={}, value={}", key, value);
         cache.put(key, value);
         dirtyKeys.add(key);
     }
 
+    @Override
     public BigInteger get(UUID key) {
+        log.trace("Getting key={}", key);
         return cache.getIfPresent(key);
     }
 
     public synchronized void flushDirtyKeys() {
+        log.trace("Flushing dirty keys");
+
         if (!dirtyKeys.isEmpty()) {
+            log.trace("Dirty keys are not empty, saving records");
             Set<UUID> keysToSave = new HashSet<>(dirtyKeys);
             dirtyKeys.clear();
 
             keysToSave.forEach(key -> cache.asMap()
                     .computeIfPresent(key, (k, v) -> {
                         try {
+                            log.trace("Saving record with id={} and likes={}", k, v);
                             recordDataFlusher.save(k, v);
                             dirtyKeys.remove(k);
                             return null;

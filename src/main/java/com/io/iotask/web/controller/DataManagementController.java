@@ -1,4 +1,4 @@
-package com.io.iotask;
+package com.io.iotask.web.controller;
 
 import com.io.iotask.service.RecordService;
 import com.io.iotask.web.model.dto.RecordDto;
@@ -31,7 +31,7 @@ import java.util.UUID;
 public class DataManagementController {
     private final RecordService recordService;
 
-    @GetMapping({"/records"})
+    @GetMapping({"/record"})
     @Operation(summary = "Get filtered records",
             description = "This method returns records filtered by author and title")
     @ApiResponses(value = {
@@ -44,7 +44,7 @@ public class DataManagementController {
         return recordService.findRecords(page, size, author, title);
     }
 
-    @GetMapping({"/records/{id}"})
+    @GetMapping({"/record/{id}"})
     @Operation(summary = "Get record by id", description = "This method returns record by id")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Record was found"), 
@@ -55,7 +55,7 @@ public class DataManagementController {
         return recordService.getRecord(id);
     }
 
-    @PostMapping({"/records"})
+    @PostMapping({"/record"})
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Save record", description = "This method saves record")
     @ApiResponses(value = {
@@ -66,7 +66,7 @@ public class DataManagementController {
         return recordService.save(recordDto);
     }
 
-    @DeleteMapping({"/records/{id}"})
+    @DeleteMapping({"/record/{id}"})
     @Operation(summary = "Delete record", description = "This method deletes record by id")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Record was deleted"),
@@ -78,7 +78,7 @@ public class DataManagementController {
         recordService.delete(id);
     }
 
-    @PatchMapping({"/records/{id}"})
+    @PatchMapping({"/record/{id}"})
     @Operation(summary = "Update record", description = "This method updates record by id")
     @ApiResponses(value = {
                     @ApiResponse(responseCode = "200", description = "Record was updated"),
@@ -91,7 +91,7 @@ public class DataManagementController {
     }
 
     @PostMapping(
-            value = {"/records/upload"},
+            value = {"/record/upload"},
             consumes = {"multipart/form-data"}
     )
     @ResponseStatus(HttpStatus.CREATED)

@@ -30,6 +30,9 @@ import java.util.UUID;
                 @Index(name = "idx_record_likes", columnList = "likes"),
                 @Index(name = "idx_record_created_at", columnList = "created_at"),
                 @Index(name = "idx_record_updated_at", columnList = "updated_at"),
+
+                @Index(name = "idx_title", columnList = "title"), //TODO must be a fulltext index, liquibase integration needed
+                @Index(name = "idx_author", columnList = "author"), //TODO must be a fulltext index, liquibase integration needed
         },
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"title", "author", "date", "deleted"}, name = "uk_record_title_author_date"),
