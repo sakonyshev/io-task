@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+//Cache implementation for deferred write of records
+//Flushes dirty keys every 20 seconds to reduce the number of writes to the database
 public class DeferredRecordWriteCacheImpl implements DisposableBean, DeferredRecordWriteCache {
     private final Cache<UUID, BigInteger> cache = Caffeine.newBuilder().build();
     private final Set<UUID> dirtyKeys = ConcurrentHashMap.newKeySet();

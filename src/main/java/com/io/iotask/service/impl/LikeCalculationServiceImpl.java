@@ -15,6 +15,10 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+//Service for processing likes
+//-1 - dislike
+//0 - neutral
+//1 - like
 public class LikeCalculationServiceImpl implements LikeCalculationService {
     private final DeferredRecordWriteCacheImpl likeCache;
     private final ClientReactionRepository clientReactionRepository;
